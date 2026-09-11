@@ -30,7 +30,7 @@ import type { OutputFormat } from './output-utils.js';
 import { printCallOutput, tailLogIfRequested } from './output-utils.js';
 import { dumpActiveHandles } from './runtime-debug.js';
 import { dimText, redText, yellowText } from './terminal.js';
-import { resolveCallTimeout, withTimeout } from './timeouts.js';
+import { resolveServerCallTimeout, withTimeout } from './timeouts.js';
 import { loadToolMetadata } from './tool-cache.js';
 
 interface ResolvedCallTarget {
@@ -80,7 +80,7 @@ async function prepareCallRequest(runtime: Runtime, args: string[]): Promise<Pre
   } catch {
     // Invocation owns unknown-server diagnostics; timeout selection is best effort.
   }
-  const timeoutMs = resolveCallTimeout(parsed.timeoutMs, definition);
+  const timeoutMs = resolveServerCallTimeout(parsed.timeoutMs, definition, server);
   const hydratedArgs = await hydratePositionalArguments(
     runtime,
     server,

@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { handleList } from '../src/cli/list-command.js';
 import { handleCall } from '../src/cli/call-command.js';
-import { resolveCallTimeout, resolveListTimeout } from '../src/cli/timeouts.js';
+import { resolveServerCallTimeout, resolveListTimeout } from '../src/cli/timeouts.js';
 import type { Runtime } from '../src/runtime.js';
 import type { ServerDefinition } from '../src/config.js';
 
@@ -56,13 +56,13 @@ it('preserves explicit command deadlines and generic-server defaults', () => {
     command: { ...chrome.command, kind: 'stdio', command: 'npx', args: ['chrome-devtools-mcp'], cwd: '/fixture' },
   };
   expect(resolveListTimeout(undefined, plain)).toBe(30_000);
-  expect(resolveCallTimeout(undefined, plain)).toBe(60_000);
+  expect(resolveServerCallTimeout(undefined, plain)).toBe(60_000);
   expect(resolveListTimeout(9000, chrome)).toBe(9000);
-  expect(resolveCallTimeout(9000, chrome)).toBe(9000);
+  expect(resolveServerCallTimeout(9000, chrome)).toBe(9000);
   vi.stubEnv('MCPORTER_LIST_TIMEOUT', '8000');
   vi.stubEnv('MCPORTER_CALL_TIMEOUT', '7000');
   expect(resolveListTimeout(undefined, chrome)).toBe(8000);
-  expect(resolveCallTimeout(undefined, chrome)).toBe(7000);
+  expect(resolveServerCallTimeout(undefined, chrome)).toBe(7000);
   expect(resolveListTimeout(9000, chrome)).toBe(9000);
-  expect(resolveCallTimeout(9000, chrome)).toBe(9000);
+  expect(resolveServerCallTimeout(9000, chrome)).toBe(9000);
 });

@@ -40,13 +40,21 @@ export function resolveListTimeout(override?: number, definition?: ServerDefinit
 }
 
 // resolveCallTimeout decides the call timeout based on environment overrides.
-export function resolveCallTimeout(override?: number, definition?: ServerDefinition): number {
-  if (typeof override === 'number' && Number.isFinite(override) && override > 0) {
-    return override;
-  }
-  return (
-    parsePositiveInteger(process.env.MCPORTER_CALL_TIMEOUT) ?? defaultServerTimeout(DEFAULT_CALL_TIMEOUT_MS, definition)
-  );
+export function resolveCallTimeout(override?: number): number {
+  if (typeof override === 'number' && Number.isFinite(override) && override > 0) return override;
+  return parseTimeout(process.env.MCPORTER_CALL_TIMEOUT, DEFAULT_CALL_TIMEOUT_MS);
+}
+
+export function resolveServerCallTimeout(override?: number, definition?: ServerDefinition, server?: string): number {
+  const timeoutMs = resolveCallTimeout(override);
+  if (
+    (typeof override === 'number' && Number.isFinite(override) && override > 0) ||
+    parsePositiveInteger(process.env.MCPORTER_CALL_TIMEOUT)
+  )
+    return timeoutMs;
+  // The daemon-only runtime intentionally has no definitions; it admits this canonical alias directly.
+  if (!definition && server === 'chrome-devtools') return DEFAULT_CHROME_TIMEOUT_MS;
+  return defaultServerTimeout(timeoutMs, definition);
 }
 
 function defaultServerTimeout(fallback: number, definition?: ServerDefinition): number {
