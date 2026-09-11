@@ -4,7 +4,7 @@
 
 ### Chrome relay
 
-- Allow 20 seconds for OpenClaw relay discovery and report discovery failures without guessing port 18799 or poisoning the retained browser owner. Preserve actionable discovery errors through daemon IPC and document canonical configuration for relay settings that must survive daemon respawns.
+- Allow 20 seconds for OpenClaw relay discovery, give Chrome auto-connect commands a cumulative startup deadline, and report discovery failures without guessing port 18799 or poisoning the retained browser owner. Preserve actionable discovery errors through daemon IPC and document canonical configuration for relay settings that must survive daemon respawns.
 
 - Restore CLI generation and tool discovery for plain `chrome-devtools-mcp` launches without requiring an existing-Chrome owner, while retaining canonical ownership checks for auto-connect and refusing direct browser selectors and ambiguous wrappers. (PR #352)
 

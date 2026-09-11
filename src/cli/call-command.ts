@@ -1,5 +1,6 @@
 import { analyzeConnectionError, type ConnectionIssue } from '../error-classifier.js';
 import { wrapCallResult } from '../result-utils.js';
+import type { ServerDefinition } from '../config.js';
 import type { Runtime } from '../runtime.js';
 import { type CallArgsParseResult, type GenericLongFlagArgument, parseCallArguments } from './call-arguments.js';
 import {
@@ -73,7 +74,13 @@ async function prepareCallRequest(runtime: Runtime, args: string[]): Promise<Pre
     return undefined;
   }
 
-  const timeoutMs = resolveCallTimeout(parsed.timeoutMs);
+  let definition: ServerDefinition | undefined;
+  try {
+    definition = runtime.getDefinition(server);
+  } catch {
+    // Invocation owns unknown-server diagnostics; timeout selection is best effort.
+  }
+  const timeoutMs = resolveCallTimeout(parsed.timeoutMs, definition);
   const hydratedArgs = await hydratePositionalArguments(
     runtime,
     server,
