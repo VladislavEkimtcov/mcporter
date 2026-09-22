@@ -75,9 +75,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.node == 24
         run: pnpm docs:site
 
-      # WMI-backed ownership checks share Windows runner CPU with nested Node processes.
-      # Limit file workers; each concurrency regression still starts its full process set.
-      - run: pnpm test ${{ matrix.os == 'windows-latest' && '--maxWorkers=2' || '' }}
+      # WMI process queries share one machine-wide provider across test files.
+      # Serialize Windows files; each regression retains its full internal process concurrency.
+      - run: pnpm test ${{ matrix.os == 'windows-latest' && '--maxWorkers=1' || '' }}
         if: matrix.os != 'ubuntu-latest' || matrix.node == 26
         env:
           FIRECRAWL_API_KEY: test
