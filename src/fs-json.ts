@@ -7,6 +7,7 @@ import { isProcessRunning } from './process-utils.js';
 
 const DEFAULT_LOCK_TIMEOUT_MS = 30_000;
 const LOCK_POLL_MS = 25;
+const WINDOWS_LOCK_RELEASE_RETRIES = 20;
 const MALFORMED_LOCK_STALE_MS = 1_000;
 const MAX_SYMLINK_DEPTH = 40;
 const DEFAULT_ATOMIC_FILE_MODE = 0o600;
@@ -90,11 +91,12 @@ export async function withFileLock<T>(
     await fs.mkdir(path.dirname(lockTargetPath), { recursive: true });
     let lockPath = `${lockTargetPath}.lock`;
     const fallbackLockPath = lockTargetPath !== filePath ? `${filePath}.lock` : undefined;
+    const lockContents = `${process.pid}\n${new Date().toISOString()}\n${crypto.randomUUID()}\n`;
     let acquired = false;
 
     while (!acquired) {
       try {
-        await fs.writeFile(lockPath, `${process.pid}\n${new Date().toISOString()}\n`, {
+        await fs.writeFile(lockPath, lockContents, {
           encoding: 'utf8',
           flag: 'wx',
         });
@@ -122,13 +124,30 @@ export async function withFileLock<T>(
     try {
       return await task();
     } finally {
-      await fs.unlink(lockPath).catch((error) => {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw error;
-        }
-      });
+      await releaseFileLock(lockPath, lockContents);
     }
   });
+}
+
+async function releaseFileLock(lockPath: string, expectedContents: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      // A failed Windows delete may have completed before a retry; never remove a successor's lock.
+      if (attempt > 0 && (await fs.readFile(lockPath, 'utf8')) !== expectedContents) return;
+      await fs.unlink(lockPath);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') return;
+      if (
+        process.platform !== 'win32' ||
+        (code !== 'EPERM' && code !== 'EBUSY') ||
+        attempt >= WINDOWS_LOCK_RELEASE_RETRIES
+      )
+        throw error;
+      await sleep(LOCK_POLL_MS);
+    }
+  }
 }
 
 function isPermissionError(error: unknown): boolean {

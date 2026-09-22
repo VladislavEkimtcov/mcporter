@@ -2,6 +2,7 @@
 
 ## [0.13.14] - Unreleased
 
+- Retry transient Windows file-lock release failures without replaying the protected operation or deleting a successor's lock, while keeping permanent failures visible.
 - Discover Claude Desktop's actual config filename and Cursor's default Linux user config, and honor redirected Windows `APPDATA` locations for both clients. Thanks @SebTardif (#382).
 - Verify private Windows daemon and Chrome handoff directories without requiring administrator elevation, while preserving owner and access restrictions. Thanks @yegetables for the report (#380).
 - Resolve the daemon process inventory through `PATH`, allowing retirement and migration on NixOS and other systems without `/bin/ps`. Thanks @tsln1998 (#381).

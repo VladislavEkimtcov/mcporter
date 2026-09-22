@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isFileLockTimeoutError, readJsonFile, withFileLock, writeJsonFile } from '../src/fs-json.js';
 
 describe('fs-json helpers', () => {
@@ -12,7 +12,73 @@ describe('fs-json helpers', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
     await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('uses distinct owner markers even for acquisitions in the same millisecond', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-21T00:00:00Z'));
+    const target = path.join(tempDir, 'unique.json');
+    const markers: string[] = [];
+    for (let index = 0; index < 2; index++) {
+      await withFileLock(target, async () => {
+        markers.push(await fs.readFile(`${target}.lock`, 'utf8'));
+      });
+    }
+    expect(markers[0]?.split('\n')[0]).toBe(String(process.pid));
+    expect(markers[0]).not.toBe(markers[1]);
+  });
+
+  it.each(['EPERM', 'EBUSY'])(
+    'retries Windows lock release after transient %s without replaying the task',
+    async (code) => {
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+      const target = path.join(tempDir, 'retry.json');
+      const originalUnlink = fs.unlink.bind(fs);
+      const unlink = vi
+        .spyOn(fs, 'unlink')
+        .mockRejectedValueOnce(Object.assign(new Error('sharing violation'), { code }))
+        .mockImplementation(originalUnlink);
+      const task = vi.fn(async () => 'done');
+      await expect(withFileLock(target, task)).resolves.toBe('done');
+      expect(task).toHaveBeenCalledOnce();
+      expect(unlink).toHaveBeenCalledTimes(2);
+      await expect(fs.stat(`${target}.lock`)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
+
+  it('bounds persistent Windows release failures and reports the original error', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const error = Object.assign(new Error('persistent sharing violation'), { code: 'EPERM' });
+    const unlink = vi.spyOn(fs, 'unlink').mockRejectedValue(error);
+    const task = vi.fn(async () => {});
+    await expect(withFileLock(path.join(tempDir, 'persistent.json'), task)).rejects.toBe(error);
+    expect(task).toHaveBeenCalledOnce();
+    expect(unlink).toHaveBeenCalledTimes(21);
+  });
+
+  it('does not retry non-Windows permission failures', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+    const error = Object.assign(new Error('permission denied'), { code: 'EPERM' });
+    const unlink = vi.spyOn(fs, 'unlink').mockRejectedValue(error);
+    await expect(withFileLock(path.join(tempDir, 'denied.json'), async () => {})).rejects.toBe(error);
+    expect(unlink).toHaveBeenCalledOnce();
+  });
+
+  it('does not delete a successor lock after an ambiguous Windows delete result', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const target = path.join(tempDir, 'successor.json');
+    const originalUnlink = fs.unlink.bind(fs);
+    const unlink = vi.spyOn(fs, 'unlink').mockImplementationOnce(async (lockPath) => {
+      await originalUnlink(lockPath);
+      await fs.writeFile(lockPath, 'successor-owner\n');
+      throw Object.assign(new Error('sharing violation'), { code: 'EPERM' });
+    });
+    await expect(withFileLock(target, async () => 'done')).resolves.toBe('done');
+    expect(unlink).toHaveBeenCalledOnce();
+    expect(await fs.readFile(`${target}.lock`, 'utf8')).toBe('successor-owner\n');
   });
 
   it('returns undefined when reading a missing file', async () => {
