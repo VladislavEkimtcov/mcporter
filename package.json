@@ -78,27 +78,27 @@
     "es-toolkit": "^1.52.0",
     "jsonc-parser": "^3.3.1",
     "ora": "^9.4.1",
-    "rolldown": "1.2.8",
-    "zod": "^4.6.2"
+    "rolldown": "1.2.9",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/estree": "^1.0.9",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.1",
     "bun-types": "^1.4.2",
     "cross-env": "^10.1.0",
     "express": "^5.2.1",
-    "oxfmt": "^0.67.0",
-    "oxlint": "^1.82.0",
-    "oxlint-tsgolint": "^7.0.2001",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
+    "oxlint-tsgolint": "^7.0.2002",
     "rimraf": "^6.1.3",
     "tsx": "^4.23.13",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "8.3.0",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   },
   "devEngines": {
     "runtime": [

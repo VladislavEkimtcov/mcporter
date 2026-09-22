@@ -2,6 +2,7 @@
 
 ## [0.13.14] - Unreleased
 
+- Refresh runtime validation, generated-CLI bundling, and development tooling while preserving Node 24 support and the 48-hour dependency release-age policy.
 - Cancel uncached discovery connections on list timeout or runtime close, retire late setup results before completing cleanup, and reject superseded callers without stale connection metadata. Thanks @SebTardif (#383).
 - Keep server-controlled descriptions and metadata inside generated comments, preventing comment terminators or line breaks from becoming executable client code.
 - Emit strict-compatible object-argument clients that forward every tool argument and return `CallResult`, including tools with reserved property names or named output schemas; preserve proxy defaults and validation. Thanks @nathanvale (#378, #379).
