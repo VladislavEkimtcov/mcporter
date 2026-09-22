@@ -3,12 +3,7 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 VERSION=${1:-}
-# The repo's ./runner wrapper was removed; run build steps directly unless a
-# caller supplies one via MCP_RUNNER (scripts/test-release.sh passes `env`).
 RUNNER=${MCP_RUNNER:-}
-if [[ -z "$RUNNER" && -x "$ROOT/runner" ]]; then
-  RUNNER="$ROOT/runner"
-fi
 run_build() { if [[ -n "$RUNNER" ]]; then "$RUNNER" "$@"; else "$@"; fi; }
 OUT_DIR=${MCPORTER_RELEASE_OUT_DIR:-"$ROOT/dist-release"}
 TEAM_ID=FWJYW4S8P8

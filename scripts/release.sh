@@ -2,12 +2,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-# The repo's ./runner wrapper was removed; run gates directly unless a caller
-# supplies one via MCP_RUNNER.
 RUNNER=${MCP_RUNNER:-}
-if [[ -z "$RUNNER" && -x "$ROOT/runner" ]]; then
-  RUNNER="$ROOT/runner"
-fi
 VERSION=${VERSION:-$(node -p "require('$ROOT/package.json').version")}
 TAG="v$VERSION"
 REPOSITORY=openclaw/mcporter
