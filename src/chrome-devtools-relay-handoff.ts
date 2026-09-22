@@ -85,7 +85,8 @@ $directory = New-Object System.IO.DirectoryInfo -ArgumentList @($target)
 $stage = 'create'
 $directory.Create($security)
 $stage = 'acl-read'
-$check = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::All)
+# Audit information is unused and requires SeSecurityPrivilege.
+$check = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner)
 $rules = @($check.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
 $ownerSid = $check.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
 $stage = 'acl-verify'

@@ -51,6 +51,8 @@ Supported auto-connect commands use the relay implementation. Under shared owner
 
 A healthy retained connection avoids reattachment between ordinary invocations. A crash, deliberate restart, migration, or explicit recovery can still require another browser permission prompt.
 
+Windows directory verification reads ownership and access rules without requiring the audit-security privilege or an elevated shell. Existing owner, protected-DACL, access-rule, and reparse-point checks still apply.
+
 ## Deliberate migration from per-config daemons
 
 Older per-config daemons are an incompatible live ownership contract. The candidate scans known daemon directories for legacy metadata and probes live owners. A live or unverified legacy process blocks startup. The candidate does not silently kill a process, fall back to the legacy protocol, or claim to transfer a stdio/CDP connection.
