@@ -1,5 +1,7 @@
 # mcporter Changelog
 
+## [0.14.1] - Unreleased
+
 ## [0.14.0] - 2026-09-22
 
 **Highlights:** OAuth consent scopes are configurable, generated TypeScript clients preserve complete tool arguments, and cancellation, local state, and generated-code handling are safer.
@@ -22,6 +24,8 @@
 - Accept narrowly normalized loopback redirects from fresh OAuth registrations, including Fastmail's portless localhost response, while preserving the actual callback and stale-client safeguards. Thanks @mikegreiling for the report (#354).
 - Add per-server `oauthRequestedScope` and `config add --oauth-requested-scope` to control OAuth consent scopes across authorization and reauthorization without changing default scope negotiation. Thanks @ronyrus for the report (#356).
 - Start OAuth on an initial unauthenticated HTTP challenge instead of treating missing credentials as a failed refresh; reuse credentials that another flow saved before retrying.
+
+**Verification:** [npm](https://www.npmjs.com/package/mcporter/v/0.14.0), [registry tarball](https://registry.npmjs.org/mcporter/-/mcporter-0.14.0.tgz), [native assets](https://github.com/openclaw/mcporter/actions/runs/35711619529), and [browser Gatekeeper proof](https://github.com/openclaw/mcporter/actions/runs/35712633120). npm integrity: `sha512-R60nKyUcW65WawhVjoESC0HeNibsf+1iqpX0wHPX9P60AFX/DYCBlhS7pDYcuWzeGYqYfZG2Xf5jWWkM74d/+A==`.
 
 ## [0.13.13] - 2026-09-14
 
