@@ -49,11 +49,12 @@ it.runIf(process.platform === 'win32')(
           '-Command',
           String.raw`
 $ErrorActionPreference = 'Stop'
-$acl = Get-Acl -LiteralPath $env:MCPORTER_TEST_ACL_DIRECTORY
+$directory = New-Object System.IO.DirectoryInfo -ArgumentList @($env:MCPORTER_TEST_ACL_DIRECTORY)
+$acl = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access -bor [System.Security.AccessControl.AccessControlSections]::Owner)
 $everyone = New-Object System.Security.Principal.SecurityIdentifier('S-1-1-0')
 $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($everyone, 'Read', 'Allow')
 $acl.AddAccessRule($rule)
-Set-Acl -LiteralPath $env:MCPORTER_TEST_ACL_DIRECTORY -AclObject $acl
+$directory.SetAccessControl($acl)
 `,
         ],
         { encoding: 'utf8', env: { ...process.env, MCPORTER_TEST_ACL_DIRECTORY: directory } }
