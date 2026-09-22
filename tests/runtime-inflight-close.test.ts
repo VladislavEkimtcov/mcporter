@@ -8,8 +8,14 @@ const SDK_REQUEST_TIMEOUT_MS = 60_000;
 const CANCELLED_CLOSE_DEADLINE_MS = SDK_REQUEST_TIMEOUT_MS / 16;
 
 describe('runtime in-flight connection close', () => {
-  it('cancels a connection before its unresponsive HTTP transport is created', async () => {
+  it.each([
+    { skipCache: false, waitForRequest: false },
+    { skipCache: false, waitForRequest: true },
+    { skipCache: true, waitForRequest: true },
+  ])('cancels an unresponsive HTTP connection: %j', async ({ skipCache, waitForRequest }) => {
+    const requestReceived = Promise.withResolvers<void>();
     const server = http.createServer(() => {
+      requestReceived.resolve();
       // Accept the request but never answer it. Without connection cancellation, the initialize request remains
       // parked on the SDK timeout; there is no child-process teardown that could settle the connection instead.
     });
@@ -30,24 +36,30 @@ describe('runtime in-flight connection close', () => {
         },
       ],
     });
-    const connecting = runtime.connect('unresponsive', { disableOAuth: true, allowCachedAuth: false });
+    const connecting = runtime.connect('unresponsive', { disableOAuth: true, allowCachedAuth: false, skipCache });
     const connectionResult = connecting.then(
       () => undefined,
       (error: unknown) => error
     );
     let closing: Promise<void> | undefined;
+    let timer: NodeJS.Timeout | undefined;
     try {
+      if (waitForRequest) await requestReceived.promise;
       closing = runtime.close();
       const settledPromptly = await Promise.race([
-        closing.then(
+        Promise.all([closing, connectionResult]).then(
           () => true,
           () => true
         ),
-        new Promise<false>((resolve) => setTimeout(() => resolve(false), CANCELLED_CLOSE_DEADLINE_MS)),
+        new Promise<false>((resolve) => {
+          timer = setTimeout(() => resolve(false), CANCELLED_CLOSE_DEADLINE_MS);
+        }),
       ]);
       expect(settledPromptly).toBe(true);
+      await expect(closing).resolves.toBeUndefined();
       await expect(connectionResult).resolves.toBeInstanceOf(Error);
     } finally {
+      if (timer) clearTimeout(timer);
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await Promise.allSettled([connecting, closing]);

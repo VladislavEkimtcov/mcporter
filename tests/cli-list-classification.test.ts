@@ -6,6 +6,25 @@ import type { ServerDefinition } from '../src/config.js';
 import { cliModulePromise, linearDefinition } from './fixtures/cli-list-fixtures.js';
 
 describe('CLI list classification and routing', () => {
+  it('closes the timed-out server and passes its timeout to discovery', async () => {
+    const { handleList } = await cliModulePromise;
+    const close = vi.fn(async () => {});
+    const listTools = vi.fn(() => new Promise<never>(() => {}));
+    const runtime = {
+      getDefinitions: () => [linearDefinition],
+      listTools,
+      close,
+    } as unknown as Awaited<ReturnType<(typeof import('../src/runtime.js'))['createRuntime']>>;
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await handleList(runtime, ['--timeout', '5']);
+      expect(close).toHaveBeenCalledWith(linearDefinition.name);
+      expect(listTools).toHaveBeenCalledWith(linearDefinition.name, expect.objectContaining({ timeoutMs: 5 }));
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it('identifies auth and offline failures and suggests remediation', async () => {
     const originalCI = process.env.CI;
     process.env.CI = '1';
@@ -261,6 +280,7 @@ describe('CLI list classification and routing', () => {
       autoAuthorize: false,
       allowCachedAuth: true,
       disableOAuth: false,
+      timeoutMs: 30_000,
     });
   });
 

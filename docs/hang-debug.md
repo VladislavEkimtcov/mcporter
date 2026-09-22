@@ -10,6 +10,8 @@ When `mcporter call` prints a tool response but the process never exits, it
 usually means Node still has active handles it is waiting on. The most common
 culprit is a child MCP server process that keeps the stdio transport alive.
 
+List timeouts close pending discovery connections, including uncached setup. `runtime.close()` aborts outstanding setup and waits for late results to be retired before finishing; superseded callers receive an error rather than a closed connection. Reported cleanup failures are retained alongside the list timeout.
+
 ## Quick Checklist
 
 1. **Run under tmux** – launch the command inside tmux so you can inspect the

@@ -2,6 +2,7 @@
 
 ## [0.13.14] - Unreleased
 
+- Cancel uncached discovery connections on list timeout or runtime close, retire late setup results before completing cleanup, and reject superseded callers without stale connection metadata. Thanks @SebTardif (#383).
 - Keep server-controlled descriptions and metadata inside generated comments, preventing comment terminators or line breaks from becoming executable client code.
 - Emit strict-compatible object-argument clients that forward every tool argument and return `CallResult`, including tools with reserved property names or named output schemas; preserve proxy defaults and validation. Thanks @nathanvale (#378, #379).
 - Avoid repeated warnings for already-ignored `uint32` and `uint64` output-schema annotations while preserving schema metadata, dialect handling, and validation. Thanks @0xCUB3 (#377).

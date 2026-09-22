@@ -402,7 +402,12 @@ async function checkListServer(
   const startedAt = Date.now();
   try {
     const tools = await withTimeout(
-      runtime.listTools(server.name, { autoAuthorize: false, allowCachedAuth: true, disableOAuth }),
+      runtime.listTools(server.name, {
+        autoAuthorize: false,
+        allowCachedAuth: true,
+        disableOAuth,
+        timeoutMs,
+      }),
       timeoutMs
     );
     const connectionInfo = await loadConnectionInfo(runtime, server.name);
@@ -414,10 +419,23 @@ async function checkListServer(
       durationMs: Date.now() - startedAt,
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const timedOut = message === 'Timeout' || /\btimed out\b/i.test(message);
+    let failure = error;
+    if (timedOut) {
+      try {
+        await runtime.close(server.name);
+      } catch (closeError) {
+        failure = new AggregateError(
+          [error, closeError],
+          'Timed out listing tools and failed to close the connection.'
+        );
+      }
+    }
     return {
       server,
       status: 'error' as const,
-      error,
+      error: failure,
       durationMs: Date.now() - startedAt,
     };
   }

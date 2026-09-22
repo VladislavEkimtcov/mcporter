@@ -36,6 +36,7 @@ export class RuntimeConnectionCache {
   private readonly serverGenerations = new Map<string, number>();
   private readonly retirementPromises = new Map<string, Set<Promise<void>>>();
   private readonly lastConnectionInfo = new Map<string, ConnectionInfo>();
+  private readonly uncachedInFlight = new Set<CachedClientEntry>();
 
   public constructor(
     private readonly definitions: Map<string, ServerDefinition>,
@@ -152,6 +153,12 @@ export class RuntimeConnectionCache {
         retired.push(cached);
       }
     }
+    for (const entry of this.uncachedInFlight) {
+      if (entry.server === normalized) {
+        this.uncachedInFlight.delete(entry);
+        retired.push(entry);
+      }
+    }
     this.activeClientKeys.delete(normalized);
     if (retired.length > 0) {
       const retirement = this.trackRetirement(normalized, this.closeCachedEntries(retired));
@@ -185,6 +192,7 @@ export class RuntimeConnectionCache {
     const servers = new Set<string>([
       ...this.definitions.keys(),
       ...[...this.clients.values()].map((entry) => entry.server),
+      ...[...this.uncachedInFlight.values()].map((entry) => entry.server),
       ...this.connectionSetupTails.keys(),
     ]);
     for (const server of servers) {
@@ -322,7 +330,9 @@ export class RuntimeConnectionCache {
       },
     }).then((context) => {
       contextRef.current = context;
-      this.lastConnectionInfo.set(normalized, connectionInfoFromClient(context.client));
+      if (this.serverGeneration(normalized) === generation && !abortController.signal.aborted) {
+        this.lastConnectionInfo.set(normalized, connectionInfoFromClient(context.client));
+      }
       return context;
     });
 
@@ -379,8 +389,29 @@ export class RuntimeConnectionCache {
       }
     }
 
+    const connection = contextPromise.then((context) => {
+      if (this.serverGeneration(normalized) !== generation || abortController.signal.aborted) {
+        throw new Error(`Connection setup for MCP server '${normalized}' was superseded.`);
+      }
+      return context;
+    });
+    const entry: CachedClientEntry = {
+      server: normalized,
+      promise: connection,
+      contextPromise,
+      allowCachedAuth: ignoresAuthCachePolicy ? effectiveAllowCachedAuth : cacheAllowCachedAuth,
+      disableOAuth: ignoresAuthCachePolicy ? disableOAuth : cacheDisableOAuth,
+      abortController,
+      transportRef,
+      contextRef,
+    };
+    this.uncachedInFlight.add(entry);
+    const forget = () => {
+      this.uncachedInFlight.delete(entry);
+    };
+    void connection.then(forget, forget);
     releaseConnectionSetup?.();
-    return contextPromise;
+    return connection;
   }
 
   // close tears down transports (and OAuth sessions) for a single server or all servers.
@@ -389,15 +420,20 @@ export class RuntimeConnectionCache {
       const normalized = server.trim();
       this.bumpServerGeneration(normalized);
       const entries = [...this.clients.entries()].filter(([, cached]) => cached.server === normalized);
+      const uncached = [...this.uncachedInFlight].filter((cached) => cached.server === normalized);
       if (entries.length === 0) {
         this.activeClientKeys.delete(normalized);
       }
       for (const [key] of entries) {
         this.clients.delete(key);
       }
+      for (const entry of uncached) {
+        this.uncachedInFlight.delete(entry);
+      }
       this.activeClientKeys.delete(normalized);
-      if (entries.length > 0) {
-        void this.trackRetirement(normalized, this.closeCachedEntries(entries.map(([, cached]) => cached)));
+      const toClose = [...entries.map(([, cached]) => cached), ...uncached];
+      if (toClose.length > 0) {
+        void this.trackRetirement(normalized, this.closeCachedEntries(toClose));
       }
       await this.awaitRetirements(normalized);
       return;
@@ -405,10 +441,12 @@ export class RuntimeConnectionCache {
 
     this.bumpAllServerGenerations();
     const entries = [...this.clients.entries()];
+    const uncached = [...this.uncachedInFlight];
     this.clients.clear();
+    this.uncachedInFlight.clear();
     this.activeClientKeys.clear();
     const byServer = new Map<string, CachedClientEntry[]>();
-    for (const [, cached] of entries) {
+    for (const cached of [...entries.map(([, entry]) => entry), ...uncached]) {
       const serverEntries = byServer.get(cached.server) ?? [];
       serverEntries.push(cached);
       byServer.set(cached.server, serverEntries);
@@ -425,6 +463,7 @@ export class RuntimeConnectionCache {
 
   private async closeCachedEntries(entries: CachedClientEntry[]): Promise<void> {
     for (const cached of entries) {
+      void this.contextPromiseFor(cached).catch(() => {});
       cached.abortController?.abort();
     }
     const results = await Promise.allSettled(
