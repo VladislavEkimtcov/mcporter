@@ -36,19 +36,19 @@ describe('host-independent platform paths', () => {
     {
       platform: 'darwin' as const,
       vscodeDir: path.join(homeDir, 'Library', 'Application Support', 'Code'),
-      claudePath: path.join(homeDir, 'Library', 'Application Support', 'Claude', 'settings.json'),
+      claudePath: path.join(homeDir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json'),
       opencodeDir: path.join(homeDir, '.config', 'opencode'),
     },
     {
       platform: 'win32' as const,
       vscodeDir: path.join(appData, 'Code'),
-      claudePath: path.join(homeDir, 'AppData', 'Roaming', 'Claude', 'settings.json'),
+      claudePath: path.join(homeDir, 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json'),
       opencodeDir: path.join(appData, 'opencode'),
     },
     {
       platform: 'linux' as const,
       vscodeDir: path.join(homeDir, '.config', 'Code'),
-      claudePath: path.join(homeDir, '.config', 'Claude', 'settings.json'),
+      claudePath: path.join(homeDir, '.config', 'Claude', 'claude_desktop_config.json'),
       opencodeDir: path.join(homeDir, '.config', 'opencode'),
     },
   ])(
@@ -58,6 +58,7 @@ describe('host-independent platform paths', () => {
 
       expect(pathsForImport('vscode', rootDir)).toContain(path.join(vscodeDir, 'User', 'mcp.json'));
       expect(pathsForImport('claude-desktop', rootDir)).toEqual([claudePath]);
+      expect(pathsForImport('cursor', rootDir)).toContain(path.join(homeDir, '.config', 'Cursor', 'User', 'mcp.json'));
       expect(pathsForImport('opencode', rootDir)).toContain(path.join(opencodeDir, 'opencode.jsonc'));
 
       const windsurfPaths = pathsForImport('windsurf', rootDir);
@@ -65,6 +66,15 @@ describe('host-independent platform paths', () => {
       expect(windsurfPaths.includes(windowsWindsurfPath)).toBe(platform === 'win32');
     }
   );
+
+  it('uses the actual Windows roaming directory for Claude Desktop and Cursor', () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    process.env.APPDATA = path.join(homeDir, 'redirected-roaming');
+    expect(pathsForImport('claude-desktop', rootDir)).toEqual([
+      path.join(process.env.APPDATA, 'Claude', 'claude_desktop_config.json'),
+    ]);
+    expect(pathsForImport('cursor', rootDir)).toContain(path.join(process.env.APPDATA, 'Cursor', 'User', 'mcp.json'));
+  });
 
   it('compares Windows paths case-insensitively and POSIX paths case-sensitively', () => {
     const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');

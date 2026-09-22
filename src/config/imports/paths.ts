@@ -37,11 +37,13 @@ export function pathsForImport(kind: ImportKind, rootDir: string): string[] {
 
 function defaultCursorUserConfigPaths(): string[] {
   const xdgConfig = process.env.XDG_CONFIG_HOME;
-  const configs = xdgConfig ? [path.join(xdgConfig, 'Cursor', 'User', 'mcp.json')] : [];
+  const linuxUserConfig = xdgConfig
+    ? path.join(xdgConfig, 'Cursor', 'User', 'mcp.json')
+    : path.join(os.homedir(), '.config', 'Cursor', 'User', 'mcp.json');
   return dedupePaths([
-    path.join(os.homedir(), 'AppData', 'Roaming', 'Cursor', 'User', 'mcp.json'),
+    path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Cursor', 'User', 'mcp.json'),
     path.join(os.homedir(), 'Library', 'Application Support', 'Cursor', 'User', 'mcp.json'),
-    ...configs,
+    linuxUserConfig,
   ]);
 }
 
@@ -118,9 +120,13 @@ function defaultOpencodeConfigDirs(): string[] {
 
 function defaultClaudeDesktopConfigPath(): string {
   const homeDir = os.homedir();
-  const darwinPath = path.join(homeDir, 'Library', 'Application Support', 'Claude', 'settings.json');
-  const windowsPath = path.join(homeDir, 'AppData', 'Roaming', 'Claude', 'settings.json');
-  const linuxPath = path.join(homeDir, '.config', 'Claude', 'settings.json');
+  const darwinPath = path.join(homeDir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+  const windowsPath = path.join(
+    process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'),
+    'Claude',
+    'claude_desktop_config.json'
+  );
+  const linuxPath = path.join(homeDir, '.config', 'Claude', 'claude_desktop_config.json');
   const platform = process.platform;
   if (platform === 'darwin') {
     return darwinPath;
