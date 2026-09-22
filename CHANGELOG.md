@@ -1,10 +1,12 @@
 # mcporter Changelog
 
-## [0.13.14] - Unreleased
+## [0.14.0] - 2026-09-22
 
+**Highlights:** OAuth consent scopes are configurable, generated TypeScript clients preserve complete tool arguments, and cancellation, local state, and generated-code handling are safer.
+
+- Keep server-controlled descriptions and metadata inside generated comments, preventing comment terminators or line breaks from becoming executable client code.
 - Refresh runtime validation, generated-CLI bundling, and development tooling while preserving Node 24 support and the 48-hour dependency release-age policy.
 - Cancel uncached discovery connections on list timeout or runtime close, retire late setup results before completing cleanup, and reject superseded callers without stale connection metadata. Thanks @SebTardif (#383).
-- Keep server-controlled descriptions and metadata inside generated comments, preventing comment terminators or line breaks from becoming executable client code.
 - Emit strict-compatible object-argument clients that forward every tool argument and return `CallResult`, including tools with reserved property names or named output schemas; preserve proxy defaults and validation. Thanks @nathanvale (#378, #379).
 - Avoid repeated warnings for already-ignored `uint32` and `uint64` output-schema annotations while preserving schema metadata, dialect handling, and validation. Thanks @0xCUB3 (#377).
 - Reject non-object `--persist` destinations and invalid `mcpServers` containers with clear errors, preserving the existing file instead of silently losing the new server or replacing invalid data. Thanks @SebTardif (#387).
